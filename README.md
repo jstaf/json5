@@ -1,16 +1,9 @@
-json5 implemented by golang
+json5
 ================
 
-[![Build Status](https://travis-ci.org/yosuke-furukawa/json5.svg?branch=master)](https://travis-ci.org/yosuke-furukawa/json5)
-
-[JSON5](https://github.com/aseemk/json5) is Yet another JSON.
-
-# INSTALL
-
-```
-$ brew tap yosuke-furukawa/json5
-$ brew install json5
-```
+Implements a json5 encoder/decoder that can be used similar to `encoding/json`.
+This is a fork of https://github.com/yosuke-furukawa/json5 with all PRs
+merged and the [license fixed](https://github.com/yosuke-furukawa/json5/issues/12).
 
 # HOW TO USE
 
