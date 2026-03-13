@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -21,6 +22,7 @@ func usage() {
 
 func procArgs() {
 	flag.Usage = usage
+	jsonMode := flag.Bool("json", false, "Whether to convert to basic json or not")
 	json5Path := flag.String("c", "", "path/to/file.json5, or blank for stdin")
 	outputPath := flag.String("o", "", "path/to/file.json, or blank for stdout")
 	flag.Parse()
@@ -42,7 +44,12 @@ func procArgs() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	b, err := json5.MarshalIndent(data, "", "  ")
+	var b []byte
+	if *jsonMode {
+		b, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		b, err = json5.MarshalIndent(data, "", "  ")
+	}
 	if err != nil {
 		fmt.Println(err)
 	}
