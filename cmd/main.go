@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jstaf/json5/encoding/json5"
+	"github.com/jstaf/json5"
 )
 
 func main() {
