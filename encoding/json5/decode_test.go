@@ -243,7 +243,20 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsFloat64},
 	{in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsNumber, useNumber: true},
 
+	/////////////////////////////
 	// json5-specific stuff
+
+	// trailing comments seem to break things
+	{in: `{
+	Float: 0.3
+	// comment
+}`, ptr: new(floatContainer), out: floatContainer{Float: 0.3}},
+	{in: `{
+	Float: 0.3,
+	// comment
+}`, ptr: new(floatContainer), out: floatContainer{Float: 0.3}},
+
+	// allow starting floats with ./-.
 	{in: `.12`, ptr: new(float64), out: 0.12},
 	{in: `-.24`, ptr: new(float64), out: -0.24},
 	{in: `{Float: -.5}`, ptr: new(floatContainer), out: floatContainer{Float: -0.5}},
