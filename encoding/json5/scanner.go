@@ -105,6 +105,9 @@ type scanner struct {
 
 	// total bytes consumed, updated by decoder.Decode
 	bytes int64
+
+	// State to resume once a line comment ends.
+	commentState func(*scanner, int) int
 }
 
 // These values are returned by the state transition functions
@@ -151,6 +154,13 @@ func (s *scanner) reset() {
 	s.err = nil
 	s.redo = false
 	s.endTop = false
+	s.commentState = nil
+}
+
+func (s *scanner) startLineComment(next func(*scanner, int) int) int {
+	s.commentState = next
+	s.step = stateInlineComment
+	return scanSkipInComment
 }
 
 // eof tells the scanner that the end of input has been reached.
@@ -200,6 +210,9 @@ func stateBeginValueOrEmpty(s *scanner, c int) int {
 	if c <= ' ' && isSpace(rune(c)) {
 		return scanSkipSpace
 	}
+	if c == '/' {
+		return s.startLineComment(stateBeginValueOrEmpty)
+	}
 	if c == ']' {
 		return stateEndValue(s, c)
 	}
@@ -239,8 +252,7 @@ func stateBeginValue(s *scanner, c int) int {
 		s.step = stateN
 		return scanBeginLiteral
 	case '/': // beginning of comment
-		s.step = stateInlineComment
-		return scanSkipInComment
+		return s.startLineComment(stateBeginValue)
 	}
 	if '1' <= c && c <= '9' { // beginning of 1234.5
 		s.step = state1
@@ -289,8 +301,7 @@ func stateBeginValueFromComment(s *scanner, c int) int {
 		s.step = stateN
 		return scanBeginLiteral
 	case '/': // beginning of comment
-		s.step = stateInlineComment
-		return scanSkipInComment
+		return s.startLineComment(stateBeginValueFromComment)
 	case '}':
 		s.step = stateBeginStringOrEmpty
 		return stateBeginStringOrEmpty(s, c)
@@ -310,6 +321,9 @@ func stateBeginStringOrEmpty(s *scanner, c int) int {
 	if c <= ' ' && isSpace(rune(c)) {
 		return scanSkipSpace
 	}
+	if c == '/' {
+		return s.startLineComment(stateBeginStringOrEmpty)
+	}
 	if c == '}' {
 		n := len(s.parseState)
 		s.parseState[n-1] = parseObjectValue
@@ -324,8 +338,7 @@ func stateBeginString(s *scanner, c int) int {
 		return scanSkipSpace
 	}
 	if c == '/' {
-		s.step = stateInlineComment
-		return scanSkipInComment
+		return s.startLineComment(stateBeginString)
 	}
 	if c == '"' {
 		s.step = stateInString
@@ -351,6 +364,9 @@ func stateEndValue(s *scanner, c int) int {
 	if c <= ' ' && isSpace(rune(c)) {
 		s.step = stateEndValue
 		return scanSkipSpace
+	}
+	if c == '/' {
+		return s.startLineComment(stateEndValue)
 	}
 	ps := s.parseState[n-1]
 	switch ps {
@@ -695,7 +711,12 @@ func stateInlineComment(s *scanner, c int) int {
 // stateSkipComment is the state after reading `//`
 func stateSkipComment(s *scanner, c int) int {
 	if c == '\n' {
-		s.step = stateBeginValueFromComment
+		if s.commentState == nil {
+			s.step = stateBeginValueFromComment
+		} else {
+			s.step = s.commentState
+		}
+		s.commentState = nil
 		return scanSkipInComment
 	}
 	s.step = stateSkipComment

@@ -248,6 +248,10 @@ var unmarshalTests = []unmarshalTest{
 
 	// trailing comments seem to break things
 	{in: `{
+	// comment
+	Float: 0.3
+}`, ptr: new(floatContainer), out: floatContainer{Float: 0.3}},
+	{in: `{
 	Float: 0.3
 	// comment
 }`, ptr: new(floatContainer), out: floatContainer{Float: 0.3}},
