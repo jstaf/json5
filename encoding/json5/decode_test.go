@@ -52,6 +52,10 @@ type tx struct {
 	x int
 }
 
+type floatContainer struct {
+	Float float64
+}
+
 // A type that can unmarshal itself.
 
 type unmarshaler struct {
@@ -238,6 +242,12 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{"F1":1,"F2":2,"F3":3}`, ptr: new(V), out: V{F1: Number("1"), F2: int32(2), F3: Number("3")}, useNumber: true},
 	{in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsFloat64},
 	{in: `{"k1":1,"k2":"s","k3":[1,2.0,3e-3],"k4":{"kk1":"s","kk2":2}}`, ptr: new(interface{}), out: ifaceNumAsNumber, useNumber: true},
+
+	// json5-specific stuff
+	{in: `.12`, ptr: new(float64), out: 0.12},
+	{in: `-.24`, ptr: new(float64), out: -0.24},
+	{in: `{Float: -.5}`, ptr: new(floatContainer), out: floatContainer{Float: -0.5}},
+	{in: `{Float: -0.5}`, ptr: new(floatContainer), out: floatContainer{Float: -0.5}},
 
 	// raw values with whitespace
 	{in: "\n true ", ptr: new(bool), out: true},
@@ -1388,3 +1398,20 @@ func TestDecoder_Decode_Unmarshaler(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
+
+/*
+// Verify we can parse
+func TestJSON5StartingDot(t *testing.T) {
+	j5 := []string{
+		`{a: -.3}`,
+		`{a: -.333}`,
+	}
+	var v objectDecoder
+
+	err := NewDecoder(bytes.NewBufferString(j5)).Decode(&v)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+*/

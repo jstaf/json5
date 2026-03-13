@@ -1,9 +1,9 @@
-// This is json5 demo
-// json5 can write comment in your json
+// json5 can include comments
 {
-  key : "Key does not need double quote",
-  // json specific
-  "of" : "course we can use json as j // son5", 
-  // json specific
-  trailing : "trailing comma is ok",
-} 
+  key: "Keys don't need double quotes",
+  decimals: -.205,
+  infinity: Infinity,
+  andBeyond: NaN,
+  trailing: "trailing commas are ok",
+  // isn't that great
+}
