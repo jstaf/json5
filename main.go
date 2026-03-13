@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -42,12 +41,10 @@ func procArgs() {
 	err = dec.Decode(&data)
 	if err != nil {
 		fmt.Println(err)
-		usage()
 	}
-	b, err := json.MarshalIndent(data, "", "    ")
+	b, err := json5.MarshalIndent(data, "", "  ")
 	if err != nil {
 		fmt.Println(err)
-		usage()
 	}
 	if *outputPath == "" {
 		fmt.Println(string(b))
