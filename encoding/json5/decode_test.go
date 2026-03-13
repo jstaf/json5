@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -265,6 +266,14 @@ var unmarshalTests = []unmarshalTest{
 	{in: `-.24`, ptr: new(float64), out: -0.24},
 	{in: `{Float: -.5}`, ptr: new(floatContainer), out: floatContainer{Float: -0.5}},
 	{in: `{Float: -0.5}`, ptr: new(floatContainer), out: floatContainer{Float: -0.5}},
+
+	// support NaN and +/-infinity
+	{in: `Infinity`, ptr: new(float64), out: math.Inf(1)},
+	{in: `-Infinity`, ptr: new(float64), out: math.Inf(-1)},
+	{in: `NaN`, ptr: new(float64), out: math.NaN()},
+	{in: `{Float: Infinity}`, ptr: new(floatContainer), out: floatContainer{Float: math.Inf(1)}},
+	{in: `{Float: -Infinity}`, ptr: new(floatContainer), out: floatContainer{Float: math.Inf(-1)}},
+	{in: `{Float: NaN}`, ptr: new(floatContainer), out: floatContainer{Float: math.NaN()}},
 
 	// raw values with whitespace
 	{in: "\n true ", ptr: new(bool), out: true},
