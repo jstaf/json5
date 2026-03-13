@@ -1,0 +1,9 @@
+{
+  "gopls": {
+    "analyses": {
+      "SA5008": false,
+      "structtag": false,
+      "deepequalerrors": false,
+    }
+  }
+}
