@@ -57,6 +57,11 @@ type floatContainer struct {
 	Float float64
 }
 
+type floatContainer2 struct {
+	Float1 float64
+	Float2 float64
+}
+
 // A type that can unmarshal itself.
 
 type unmarshaler struct {
@@ -274,6 +279,10 @@ var unmarshalTests = []unmarshalTest{
 	{in: `{Float: Infinity}`, ptr: new(floatContainer), out: floatContainer{Float: math.Inf(1)}},
 	{in: `{Float: -Infinity}`, ptr: new(floatContainer), out: floatContainer{Float: math.Inf(-1)}},
 	{in: `{Float: NaN}`, ptr: new(floatContainer), out: floatContainer{Float: math.NaN()}},
+	{in: `{
+Float1: -Infinity,
+Float2: NaN,
+}`, ptr: new(floatContainer2), out: floatContainer2{Float1: math.Inf(-1), Float2: math.NaN()}},
 
 	// raw values with whitespace
 	{in: "\n true ", ptr: new(bool), out: true},
@@ -561,7 +570,7 @@ func TestUnmarshal(t *testing.T) {
 			t.Errorf("#%d: %v want %v", i, err, tt.err)
 			continue
 		}
-		if !reflect.DeepEqual(v.Elem().Interface(), tt.out) {
+		if !deepEqualJSON5Value(v.Elem().Interface(), tt.out) {
 			t.Errorf("#%d: mismatch\nhave: %#+v\nwant: %#+v", i, v.Elem().Interface(), tt.out)
 			data, _ := Marshal(v.Elem().Interface())
 			println(string(data))
@@ -586,13 +595,85 @@ func TestUnmarshal(t *testing.T) {
 				t.Errorf("#%d: error re-unmarshaling %#q: %v", i, enc, err)
 				continue
 			}
-			if !reflect.DeepEqual(v.Elem().Interface(), vv.Elem().Interface()) {
+			if !deepEqualJSON5Value(v.Elem().Interface(), vv.Elem().Interface()) {
 				t.Errorf("#%d: mismatch\nhave: %#+v\nwant: %#+v", i, v.Elem().Interface(), vv.Elem().Interface())
 				t.Errorf("     In: %q", strings.Map(noSpace, string(in)))
 				t.Errorf("Marshal: %q", strings.Map(noSpace, string(enc)))
 				continue
 			}
 		}
+	}
+}
+
+func deepEqualJSON5Value(got, want interface{}) bool {
+	return deepEqualJSON5Reflect(reflect.ValueOf(got), reflect.ValueOf(want))
+}
+
+func deepEqualJSON5Reflect(got, want reflect.Value) bool {
+	if !got.IsValid() || !want.IsValid() {
+		return !got.IsValid() && !want.IsValid()
+	}
+	if got.Type() != want.Type() {
+		return reflect.DeepEqual(got.Interface(), want.Interface())
+	}
+
+	switch got.Kind() {
+	case reflect.Bool:
+		return got.Bool() == want.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return got.Int() == want.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return got.Uint() == want.Uint()
+	case reflect.Float32, reflect.Float64:
+		gf := got.Float()
+		wf := want.Float()
+		if math.IsNaN(gf) && math.IsNaN(wf) {
+			return true
+		}
+		return gf == wf
+	case reflect.Interface, reflect.Ptr:
+		if got.IsNil() || want.IsNil() {
+			return got.IsNil() == want.IsNil()
+		}
+		return deepEqualJSON5Reflect(got.Elem(), want.Elem())
+	case reflect.Struct:
+		for i := 0; i < got.NumField(); i++ {
+			if !deepEqualJSON5Reflect(got.Field(i), want.Field(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Slice, reflect.Array:
+		if got.Len() != want.Len() {
+			return false
+		}
+		for i := 0; i < got.Len(); i++ {
+			if !deepEqualJSON5Reflect(got.Index(i), want.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Map:
+		if got.IsNil() || want.IsNil() {
+			return got.IsNil() == want.IsNil()
+		}
+		if got.Len() != want.Len() {
+			return false
+		}
+		for _, key := range got.MapKeys() {
+			wantValue := want.MapIndex(key)
+			if !wantValue.IsValid() || !deepEqualJSON5Reflect(got.MapIndex(key), wantValue) {
+				return false
+			}
+		}
+		return true
+	case reflect.String:
+		return got.String() == want.String()
+	default:
+		if !got.CanInterface() || !want.CanInterface() {
+			return false
+		}
+		return reflect.DeepEqual(got.Interface(), want.Interface())
 	}
 }
 

@@ -236,6 +236,12 @@ func stateBeginValue(s *scanner, c int) int {
 	case '"':
 		s.step = stateInString
 		return scanBeginLiteral
+	case 'I':
+		s.step = stateInfN
+		return scanBeginLiteral
+	case 'N':
+		s.step = stateNa
+		return scanBeginLiteral
 	case '.':
 		s.step = stateDot
 		return scanBeginLiteral
@@ -272,12 +278,8 @@ func stateBeginValueFromComment(s *scanner, c int) int {
 	if c <= ' ' && isSpace(rune(c)) {
 		return scanSkipSpace
 	}
-	if isIdentifier(c) {
-		s.step = stateInStringKey
-		return scanBeginLiteral
-	}
-	switch c {
-	case '{':
+		switch c {
+		case '{':
 		s.step = stateBeginStringOrEmpty
 		s.pushParseState(parseObjectKey)
 		return scanBeginObject
@@ -285,12 +287,18 @@ func stateBeginValueFromComment(s *scanner, c int) int {
 		s.step = stateBeginValueOrEmpty
 		s.pushParseState(parseArrayValue)
 		return scanBeginArray
-	case '"':
-		s.step = stateInString
-		return scanBeginLiteral
-	case '.':
-		s.step = stateDot
-		return scanBeginLiteral
+		case '"':
+			s.step = stateInString
+			return scanBeginLiteral
+		case 'I':
+			s.step = stateInfN
+			return scanBeginLiteral
+		case 'N':
+			s.step = stateNa
+			return scanBeginLiteral
+		case '.':
+			s.step = stateDot
+			return scanBeginLiteral
 	case '-':
 		s.step = stateNeg
 		return scanBeginLiteral
@@ -311,13 +319,17 @@ func stateBeginValueFromComment(s *scanner, c int) int {
 	case '}':
 		s.step = stateBeginStringOrEmpty
 		return stateBeginStringOrEmpty(s, c)
-	case ']':
-		s.step = stateBeginValueOrEmpty
-		return stateBeginValueOrEmpty(s, c)
-	}
-	if '1' <= c && c <= '9' { // beginning of 1234.5
-		s.step = state1
-		return scanBeginLiteral
+		case ']':
+			s.step = stateBeginValueOrEmpty
+			return stateBeginValueOrEmpty(s, c)
+		}
+		if isIdentifier(c) {
+			s.step = stateInStringKey
+			return scanBeginLiteral
+		}
+		if '1' <= c && c <= '9' { // beginning of 1234.5
+			s.step = state1
+			return scanBeginLiteral
 	}
 	return s.error(c, "looking for beginning of value")
 }
@@ -522,6 +534,10 @@ func stateInStringEscU123(s *scanner, c int) int {
 
 // stateNeg is the state after reading `-` during a number.
 func stateNeg(s *scanner, c int) int {
+	if c == 'I' {
+		s.step = stateInfN
+		return scanContinue
+	}
 	if c == '.' {
 		s.step = stateDot
 		return scanContinue
@@ -617,6 +633,87 @@ func stateE0(s *scanner, c int) int {
 		return scanContinue
 	}
 	return stateEndValue(s, c)
+}
+
+// stateInfN is the state after reading `I` in Infinity.
+func stateInfN(s *scanner, c int) int {
+	if c == 'n' {
+		s.step = stateInfF
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'n')")
+}
+
+// stateInfF is the state after reading `In` in Infinity.
+func stateInfF(s *scanner, c int) int {
+	if c == 'f' {
+		s.step = stateInfI1
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'f')")
+}
+
+// stateInfI1 is the state after reading `Inf` in Infinity.
+func stateInfI1(s *scanner, c int) int {
+	if c == 'i' {
+		s.step = stateInfN2
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'i')")
+}
+
+// stateInfN2 is the state after reading `Infi` in Infinity.
+func stateInfN2(s *scanner, c int) int {
+	if c == 'n' {
+		s.step = stateInfI2
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'n')")
+}
+
+// stateInfI2 is the state after reading `Infin` in Infinity.
+func stateInfI2(s *scanner, c int) int {
+	if c == 'i' {
+		s.step = stateInfT
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'i')")
+}
+
+// stateInfT is the state after reading `Infini` in Infinity.
+func stateInfT(s *scanner, c int) int {
+	if c == 't' {
+		s.step = stateInfY
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 't')")
+}
+
+// stateInfY is the state after reading `Infinit` in Infinity.
+func stateInfY(s *scanner, c int) int {
+	if c == 'y' {
+		s.step = stateEndValue
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'y')")
+}
+
+// stateNa is the state after reading `N` in NaN.
+func stateNa(s *scanner, c int) int {
+	if c == 'a' {
+		s.step = stateNaN
+		return scanContinue
+	}
+	return s.error(c, "in literal NaN (expecting 'a')")
+}
+
+// stateNaN is the state after reading `Na` in NaN.
+func stateNaN(s *scanner, c int) int {
+	if c == 'N' {
+		s.step = stateEndValue
+		return scanContinue
+	}
+	return s.error(c, "in literal NaN (expecting 'N')")
 }
 
 // stateT is the state after reading `t`.

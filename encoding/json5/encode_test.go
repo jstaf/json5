@@ -127,20 +127,24 @@ func TestEncodeRenamedByteSlice(t *testing.T) {
 	}
 }
 
-var unsupportedValues = []interface{}{
-	math.NaN(),
-	math.Inf(-1),
-	math.Inf(1),
+var specialFloatValues = []struct {
+	in   interface{}
+	want string
+}{
+	{math.NaN(), "NaN"},
+	{math.Inf(-1), "-Infinity"},
+	{math.Inf(1), "Infinity"},
 }
 
-func TestUnsupportedValues(t *testing.T) {
-	for _, v := range unsupportedValues {
-		if _, err := Marshal(v); err != nil {
-			if _, ok := err.(*UnsupportedValueError); !ok {
-				t.Errorf("for %v, got %T want UnsupportedValueError", v, err)
-			}
-		} else {
-			t.Errorf("for %v, expected error", v)
+func TestSpecialFloatValues(t *testing.T) {
+	for _, tt := range specialFloatValues {
+		got, err := Marshal(tt.in)
+		if err != nil {
+			t.Errorf("for %v, got unexpected error %v", tt.in, err)
+			continue
+		}
+		if string(got) != tt.want {
+			t.Errorf("for %v, got %q want %q", tt.in, got, tt.want)
 		}
 	}
 }

@@ -22,6 +22,7 @@ func usage() {
 
 func procArgs() {
 	flag.Usage = usage
+	jsonMode := flag.Bool("json", false, "Whether to convert to basic json or not")
 	json5Path := flag.String("c", "", "path/to/file.json5, or blank for stdin")
 	outputPath := flag.String("o", "", "path/to/file.json, or blank for stdout")
 	flag.Parse()
@@ -42,12 +43,15 @@ func procArgs() {
 	err = dec.Decode(&data)
 	if err != nil {
 		fmt.Println(err)
-		usage()
 	}
-	b, err := json.MarshalIndent(data, "", "    ")
+	var b []byte
+	if *jsonMode {
+		b, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		b, err = json5.MarshalIndent(data, "", "  ")
+	}
 	if err != nil {
 		fmt.Println(err)
-		usage()
 	}
 	if *outputPath == "" {
 		fmt.Println(string(b))

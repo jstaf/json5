@@ -751,7 +751,7 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value, fromQuoted bool
 		}
 
 		default: // number
-			if c != '-' && c != '.' && (c < '0' || c > '9') {
+			if c != '-' && c != '.' && c != 'I' && c != 'N' && (c < '0' || c > '9') {
 				if fromQuoted {
 					d.error(fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type()))
 				} else {
@@ -935,7 +935,7 @@ func (d *decodeState) literalInterface() interface{} {
 		return s
 
 	default: // number
-		if c != '-' && (c < '0' || c > '9') {
+		if c != '-' && c != '.' && c != 'I' && c != 'N' && (c < '0' || c > '9') {
 			d.error(errPhase)
 		}
 		n, err := d.convertNumber(string(item))
