@@ -236,6 +236,9 @@ func stateBeginValue(s *scanner, c int) int {
 	case '"':
 		s.step = stateInString
 		return scanBeginLiteral
+	case '.':
+		s.step = stateDot
+		return scanBeginLiteral
 	case '-':
 		s.step = stateNeg
 		return scanBeginLiteral
@@ -284,6 +287,9 @@ func stateBeginValueFromComment(s *scanner, c int) int {
 		return scanBeginArray
 	case '"':
 		s.step = stateInString
+		return scanBeginLiteral
+	case '.':
+		s.step = stateDot
 		return scanBeginLiteral
 	case '-':
 		s.step = stateNeg
@@ -516,6 +522,10 @@ func stateInStringEscU123(s *scanner, c int) int {
 
 // stateNeg is the state after reading `-` during a number.
 func stateNeg(s *scanner, c int) int {
+	if c == '.' {
+		s.step = stateDot
+		return scanContinue
+	}
 	if c == '0' {
 		s.step = state0
 		return scanContinue
